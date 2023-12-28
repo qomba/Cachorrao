@@ -232,35 +232,44 @@ function atualizarColeirasEPowerUps() {
             teclasPressionadas[event.key] = false;
         });
 
-        canvas.addEventListener('touchstart', function(event) {
-            const touchX = event.touches[0].clientX;
-            const touchY = event.touches[0].clientY;
-            if (touchX > cachorro.x && touchX < cachorro.x + cachorro.width &&
-                touchY > cachorro.y && touchY < cachorro.y + cachorro.height) {
-                cachorro.dragging = true;
-            }
-        });
+canvas.addEventListener('touchstart', function(event) {
+    const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
+    const touchY = event.touches[0].clientY - canvas.getBoundingClientRect().top;
+    if (touchX > cachorro.x && touchX < cachorro.x + cachorro.width &&
+        touchY > cachorro.y && touchY < cachorro.y + cachorro.height) {
+        cachorro.dragging = true;
+    }
+    event.preventDefault(); // Previne comportamento padrão do toque
+}, { passive: false });
 
-        canvas.addEventListener('touchmove', function(event) {
-            if (cachorro.dragging) {
-                const touchX = event.touches[0].clientX;
-                const touchY = event.touches[0].clientY;
-                cachorro.x = touchX - cachorro.width / 2;
-                cachorro.y = touchY - cachorro.height / 2;
-            }
-        });
+canvas.addEventListener('touchmove', function(event) {
+    if (cachorro.dragging) {
+        const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
+        const touchY = event.touches[0].clientY - canvas.getBoundingClientRect().top;
+        cachorro.x = touchX - cachorro.width / 2;
+        cachorro.y = touchY - cachorro.height / 2;
+    }
+    event.preventDefault(); // Previne comportamento padrão do toque
+}, { passive: false });
 
-        canvas.addEventListener('touchend', function(event) {
-            cachorro.dragging = false;
-        });
+canvas.addEventListener('touchend', function(event) {
+    cachorro.dragging = false;
+    event.preventDefault(); // Previne comportamento padrão do toque
+}, { passive: false });
 
-        canvas.addEventListener('click', function(event) {
-            if (temEscudo && event.clientX >= 10 && event.clientX <= 40 && event.clientY >= 10 && event.clientY <= 40) {
-                escudoAtivo = true;
-                temEscudo = false;
-                escudoTempoAtivacao = Date.now();
-            }
-        });
+
+canvas.addEventListener('click', function(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    if (temEscudo && x >= 10 && x <= 40 && y >= 10 && y <= 40) {
+        escudoAtivo = true;
+        temEscudo = false;
+        escudoTempoAtivacao = Date.now();
+    }
+});
+
 
         loopDeJogo();
     </script>
