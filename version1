@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jogo da Estrada 3D</title>
+    <style>
+        #gameCanvas {
+            border: 1px solid black; /* Para visualização */
+            display: block;
+            margin: 0 auto;
+            background-color: #e0e0e0;
+        }
+        #gameOverScreen {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background-color: white;
+            border: 1px solid black;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOverScreen">
+        <p>Game Over!</p>
+        <button onclick="restartGame()">Restart</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        canvas.width = 800;
+        canvas.height = 600;
+        let jogoRodando = true;
+
+        // Configurações da estrada
+        const roadWidthAtFront = 400;
+        const roadWidthAtBack = 100;
+        const roadY = canvas.height - 100;
+        const roadLength = 20;
+
+        // Configurações do cachorro
+        let cachorro = {
+            x: canvas.width / 2, y: roadY - 30, width: 50, height: 50, speed: 5
+        };
+        let teclasPressionadas = {};
+
+        // Configurações das coleiras
+        let coleiras = [];
+        let velocidadeColeira = 5;
+        let intervaloColeira = 1500;
+        let ultimaColeira = 0;
+        let pontuacao = 0;
+
+        function atualizarDificuldade() {
+            if (pontuacao % 100 === 0) {
+                velocidadeColeira += 1;
+                intervaloColeira = Math.max(300, intervaloColeira - 100);
+            }
+        }
+
+        function criarColeira() {
+            let posX = Math.random() * (roadWidthAtFront - 30) + (canvas.width / 2 - roadWidthAtFront / 2);
+            coleiras.push({ x: posX, y: -30, width: 30, height: 30 });
+        }
+
+        function atualizarColeiras() {
+            let agora = Date.now();
+            if (agora - ultimaColeira > intervaloColeira) {
+                criarColeira();
+                ultimaColeira = agora;
+            }
+
+            coleiras.forEach(coleira => {
+                coleira.y += velocidadeColeira;
+                if (coleira.y > canvas.height) {
+                    coleiras.shift();
+                }
+            });
+        }
+
+        function detectarColisoes() {
+            coleiras.forEach(coleira => {
+                if (cachorro.x < coleira.x + coleira.width &&
+                    cachorro.x + cachorro.width > coleira.x &&
+                    cachorro.y < coleira.y + coleira.height &&
+                    cachorro.y + cachorro.height > coleira.y) {
+                    gameOver();
+                }
+            });
+        }
+
+        function desenharEstrada() {
+            for (let i = 0; i < roadLength; i++) {
+                const width = roadWidthAtFront - (roadWidthAtFront - roadWidthAtBack) * (i / roadLength);
+                const x = canvas.width / 2 - width / 2;
+                const y = roadY - (i * (roadY / roadLength));
+
+                ctx.fillStyle = i % 2 === 0 ? 'darkgrey' : 'grey';
+                ctx.fillRect(x, y, width, (roadY / roadLength));
+            }
+        }
+
+        function gameOver() {
+            jogoRodando = false;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function restartGame() {
+            window.location.reload();
+        }
+
+        function loopDeJogo() {
+            if (!jogoRodando) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (teclasPressionadas['ArrowLeft']) {
+                cachorro.x -= cachorro.speed;
+            }
+            if (teclasPressionadas['ArrowRight']) {
+                cachorro.x += cachorro.speed;
+            }
+            if (teclasPressionadas['ArrowUp']) {
+                cachorro.y -= cachorro.speed;
+            }
+            if (teclasPressionadas['ArrowDown']) {
+                cachorro.y += cachorro.speed;
+            }
+
+            desenharEstrada();
+            atualizarColeiras();
+            atualizarDificuldade();
+
+            coleiras.forEach(coleira => {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
+            });
+
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(cachorro.x, cachorro.y, cachorro.width, cachorro.height);
+
+            detectarColisoes();
+
+            pontuacao++;
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Pontuação: ${pontuacao}`, 10, 20);
+
+            requestAnimationFrame(loopDeJogo);
+        }
+
+        window.addEventListener('keydown', function(event) {
+            teclasPressionadas[event.key] = true;
+        });
+
+        window.addEventListener('keyup', function(event) {
+            teclasPressionadas[event.key] = false;
+        });
+
+        loopDeJogo();
+    </script>
+</body>
+</html>
