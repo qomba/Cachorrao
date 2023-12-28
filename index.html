@@ -56,6 +56,7 @@
         };
         let teclasPressionadas = {};
 
+	let velocidadePowerUp = 3; // Defina uma velocidade constante para os power-ups
         let coleiras = [];
         let powerUps = [];
         let ultimaColeira = 0;
@@ -75,48 +76,48 @@
             powerUps.push({ x: posX, y: -30, width: 30, height: 30, tipo: tipo });
         }
 
-        function atualizarColeirasEPowerUps() {
-            let agora = Date.now();
-            if (agora - ultimaColeira > intervaloColeira) {
-                criarColeira();
-                ultimaColeira = agora;
-            }
+function atualizarColeirasEPowerUps() {
+    let agora = Date.now();
+    if (agora - ultimaColeira > intervaloColeira) {
+        criarColeira();
+        ultimaColeira = agora;
+    }
 
-            if (agora - ultimaPowerUp > intervaloPowerUp) {
-                criarPowerUp();
-                ultimaPowerUp = agora;
-            }
+    if (agora - ultimaPowerUp > intervaloPowerUp) {
+        criarPowerUp();
+        ultimaPowerUp = agora;
+    }
 
-            coleiras.forEach((objeto, index) => {
-                objeto.y += velocidadeColeira;
-                if (objeto.y > canvas.height) {
-                    coleiras.splice(index, 1);
-                }
-            });
-
-            powerUps.forEach((objeto, index) => {
-                objeto.y += velocidadeColeira;
-                if (objeto.y > canvas.height) {
-                    powerUps.splice(index, 1);
-                }
-            });
+    coleiras.forEach((objeto, index) => {
+        objeto.y += velocidadeColeira; // A velocidade das coleiras aumenta com a pontuação
+        if (objeto.y > canvas.height) {
+            coleiras.splice(index, 1);
         }
+    });
+
+    powerUps.forEach((objeto, index) => {
+        objeto.y += velocidadePowerUp; // A velocidade dos power-ups é constante
+        if (objeto.y > canvas.height) {
+            powerUps.splice(index, 1);
+        }
+    });
+}
 
         function detectarColisoes() {
-            coleiras.forEach((coleira, index) => {
-                if (cachorro.x < coleira.x + coleira.width &&
-                    cachorro.x + cachorro.width > coleira.x &&
-                    cachorro.y < coleira.y + coleira.height &&
-                    cachorro.y + cachorro.height > coleira.y) {
-                    if (!escudoAtivo) {
-                        vidas--;
-                        if (vidas <= 0) {
-                            gameOver();
-                        }
-                    }
-                    coleiras.splice(index, 1);
+    coleiras.forEach((coleira, index) => {
+        if (cachorro.x < coleira.x + coleira.width &&
+            cachorro.x + cachorro.width > coleira.x &&
+            cachorro.y < coleira.y + coleira.height &&
+            cachorro.y + cachorro.height > coleira.y) {
+            if (!escudoAtivo) {
+                vidas--;
+                if (vidas < 0) {
+                    gameOver();
                 }
-            });
+            }
+            coleiras.splice(index, 1);
+        }
+    });
 
             powerUps.forEach((powerUp, index) => {
                 if (cachorro.x < powerUp.x + powerUp.width &&
@@ -177,6 +178,21 @@
             if (!jogoRodando) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		    // Atualiza a posição do cachorro com base nas teclas pressionadas
+    if (teclasPressionadas['ArrowLeft'] && cachorro.x > 0) {
+        cachorro.x -= cachorro.speed;
+    }
+    if (teclasPressionadas['ArrowRight'] && cachorro.x < canvas.width - cachorro.width) {
+        cachorro.x += cachorro.speed;
+    }
+    if (teclasPressionadas['ArrowUp'] && cachorro.y > 0) {
+        cachorro.y -= cachorro.speed;
+    }
+    if (teclasPressionadas['ArrowDown'] && cachorro.y < canvas.height - cachorro.height) {
+        cachorro.y += cachorro.speed;
+    }
+
             atualizarColeirasEPowerUps();
             detectarColisoes();
             desenharObjetos();
