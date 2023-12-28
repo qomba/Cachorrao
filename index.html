@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Jogo da Estrada 3D</title>
+    <title>Jogo Simples com Cachorro</title>
     <style>
-        #gameCanvas {
-            border: 1px solid black; /* Para visualização */
-            display: block;
-            margin: 0 auto;
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             background-color: #e0e0e0;
+        }
+        #gameCanvas {
+            border: 1px solid black;
         }
         #gameOverScreen {
             display: none;
@@ -26,45 +31,34 @@
     <canvas id="gameCanvas"></canvas>
     <div id="gameOverScreen">
         <p>Game Over!</p>
+        <p id="highScoreText"></p>
         <button onclick="restartGame()">Restart</button>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const gameOverScreen = document.getElementById('gameOverScreen');
+        const highScoreText = document.getElementById('highScoreText');
 
-        canvas.width = 800;
-        canvas.height = 600;
+        canvas.width = Math.min(window.innerWidth, 800);
+        canvas.height = Math.min(window.innerHeight, 600);
+
         let jogoRodando = true;
+        let pontuacao = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
 
-        // Configurações da estrada
-        const roadWidthAtFront = 400;
-        const roadWidthAtBack = 100;
-        const roadY = canvas.height - 100;
-        const roadLength = 20;
-
-        // Configurações do cachorro
         let cachorro = {
-            x: canvas.width / 2, y: roadY - 30, width: 50, height: 50, speed: 5
+            x: canvas.width / 2, y: canvas.height / 2, width: 50, height: 50, speed: 5
         };
         let teclasPressionadas = {};
 
-        // Configurações das coleiras
         let coleiras = [];
         let velocidadeColeira = 5;
         let intervaloColeira = 1500;
         let ultimaColeira = 0;
-        let pontuacao = 0;
-
-        function atualizarDificuldade() {
-            if (pontuacao % 100 === 0) {
-                velocidadeColeira += 1;
-                intervaloColeira = Math.max(300, intervaloColeira - 100);
-            }
-        }
 
         function criarColeira() {
-            let posX = Math.random() * (roadWidthAtFront - 30) + (canvas.width / 2 - roadWidthAtFront / 2);
+            let posX = Math.random() * (canvas.width - 30);
             coleiras.push({ x: posX, y: -30, width: 30, height: 30 });
         }
 
@@ -94,19 +88,11 @@
             });
         }
 
-        function desenharEstrada() {
-            for (let i = 0; i < roadLength; i++) {
-                const width = roadWidthAtFront - (roadWidthAtFront - roadWidthAtBack) * (i / roadLength);
-                const x = canvas.width / 2 - width / 2;
-                const y = roadY - (i * (roadY / roadLength));
-
-                ctx.fillStyle = i % 2 === 0 ? 'darkgrey' : 'grey';
-                ctx.fillRect(x, y, width, (roadY / roadLength));
-            }
-        }
-
         function gameOver() {
             jogoRodando = false;
+            highScore = Math.max(highScore, pontuacao);
+            localStorage.setItem('highScore', highScore);
+            highScoreText.textContent = `Recorde: ${highScore}`;
             gameOverScreen.style.display = 'block';
         }
 
@@ -119,23 +105,20 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (teclasPressionadas['ArrowLeft']) {
+            if (teclasPressionadas['ArrowLeft'] && cachorro.x > 0) {
                 cachorro.x -= cachorro.speed;
             }
-            if (teclasPressionadas['ArrowRight']) {
+            if (teclasPressionadas['ArrowRight'] && cachorro.x < canvas.width - cachorro.width) {
                 cachorro.x += cachorro.speed;
             }
-            if (teclasPressionadas['ArrowUp']) {
+            if (teclasPressionadas['ArrowUp'] && cachorro.y > 0) {
                 cachorro.y -= cachorro.speed;
             }
-            if (teclasPressionadas['ArrowDown']) {
+            if (teclasPressionadas['ArrowDown'] && cachorro.y < canvas.height - cachorro.height) {
                 cachorro.y += cachorro.speed;
             }
 
-            desenharEstrada();
             atualizarColeiras();
-            atualizarDificuldade();
-
             coleiras.forEach(coleira => {
                 ctx.fillStyle = 'blue';
                 ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
@@ -160,6 +143,23 @@
 
         window.addEventListener('keyup', function(event) {
             teclasPressionadas[event.key] = false;
+        });
+
+        canvas.addEventListener('touchstart', function(event) {
+            const touchX = event.touches[0].clientX;
+            const touchY = event.touches[0].clientY;
+
+            if (touchX < canvas.width / 2) {
+                cachorro.x -= cachorro.speed;
+            } else {
+                cachorro.x += cachorro.speed;
+            }
+
+            if (touchY < canvas.height / 2) {
+                cachorro.y -= cachorro.speed;
+            } else {
+                cachorro.y += cachorro.speed;
+            }
         });
 
         loopDeJogo();
