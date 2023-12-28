@@ -46,46 +46,119 @@
         let jogoRodando = true;
         let pontuacao = 0;
         let highScore = localStorage.getItem('highScore') || 0;
+        let vidas = 0;
+        let escudoAtivo = false;
+        let escudoTempoAtivacao = 0;
+        let temEscudo = false;
 
         let cachorro = {
-            x: canvas.width / 2, y: canvas.height / 2, width: 50, height: 50, speed: 5
+            x: canvas.width / 2, y: canvas.height / 2, width: 50, height: 50, speed: 5, dragging: false
         };
         let teclasPressionadas = {};
 
         let coleiras = [];
-        let velocidadeColeira = 5;
-        let intervaloColeira = 1500;
+        let powerUps = [];
         let ultimaColeira = 0;
+        let ultimaPowerUp = 0;
+        let intervaloColeira = 1500;
+        let intervaloPowerUp = 10000;
+        let velocidadeColeira = 5;
 
         function criarColeira() {
             let posX = Math.random() * (canvas.width - 30);
-            coleiras.push({ x: posX, y: -30, width: 30, height: 30 });
+            coleiras.push({ x: posX, y: -30, width: 30, height: 30, tipo: 'coleira' });
         }
 
-        function atualizarColeiras() {
+        function criarPowerUp() {
+            let posX = Math.random() * (canvas.width - 30);
+            let tipo = Math.random() > 0.5 ? 'vida' : 'escudo';
+            powerUps.push({ x: posX, y: -30, width: 30, height: 30, tipo: tipo });
+        }
+
+        function atualizarColeirasEPowerUps() {
             let agora = Date.now();
             if (agora - ultimaColeira > intervaloColeira) {
                 criarColeira();
                 ultimaColeira = agora;
             }
 
-            coleiras.forEach(coleira => {
-                coleira.y += velocidadeColeira;
-                if (coleira.y > canvas.height) {
-                    coleiras.shift();
+            if (agora - ultimaPowerUp > intervaloPowerUp) {
+                criarPowerUp();
+                ultimaPowerUp = agora;
+            }
+
+            coleiras.forEach((objeto, index) => {
+                objeto.y += velocidadeColeira;
+                if (objeto.y > canvas.height) {
+                    coleiras.splice(index, 1);
+                }
+            });
+
+            powerUps.forEach((objeto, index) => {
+                objeto.y += velocidadeColeira;
+                if (objeto.y > canvas.height) {
+                    powerUps.splice(index, 1);
                 }
             });
         }
 
         function detectarColisoes() {
-            coleiras.forEach(coleira => {
+            coleiras.forEach((coleira, index) => {
                 if (cachorro.x < coleira.x + coleira.width &&
                     cachorro.x + cachorro.width > coleira.x &&
                     cachorro.y < coleira.y + coleira.height &&
                     cachorro.y + cachorro.height > coleira.y) {
-                    gameOver();
+                    if (!escudoAtivo) {
+                        vidas--;
+                        if (vidas <= 0) {
+                            gameOver();
+                        }
+                    }
+                    coleiras.splice(index, 1);
                 }
             });
+
+            powerUps.forEach((powerUp, index) => {
+                if (cachorro.x < powerUp.x + powerUp.width &&
+                    cachorro.x + cachorro.width > powerUp.x &&
+                    cachorro.y < powerUp.y + powerUp.height &&
+                    cachorro.y + cachorro.height > powerUp.y) {
+                    if (powerUp.tipo === 'vida') {
+                        vidas++;
+                    } else if (powerUp.tipo === 'escudo') {
+                        temEscudo = true;
+                    }
+                    powerUps.splice(index, 1);
+                }
+            });
+        }
+
+        function desenharObjetos() {
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(cachorro.x, cachorro.y, cachorro.width, cachorro.height);
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(vidas, cachorro.x + 20, cachorro.y + 30);
+
+            coleiras.forEach(coleira => {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
+            });
+
+            powerUps.forEach(powerUp => {
+                ctx.fillStyle = powerUp.tipo === 'vida' ? 'green' : 'yellow';
+                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+            });
+
+            if (escudoAtivo) {
+                ctx.strokeStyle = 'cyan';
+                ctx.strokeRect(cachorro.x - 5, cachorro.y - 5, cachorro.width + 10, cachorro.height + 10);
+            }
+
+            if (temEscudo) {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(10, 10, 30, 30); // Desenha o ícone do escudo no canto
+            }
         }
 
         function gameOver() {
@@ -104,7 +177,27 @@
             if (!jogoRodando) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            atualizarColeirasEPowerUps();
+            detectarColisoes();
+            desenharObjetos();
 
+            if (escudoAtivo && Date.now() - escudoTempoAtivacao > 5000) {
+                escudoAtivo = false;
+            }
+
+            pontuacao++;
+            if (pontuacao % 100 === 0) {
+                velocidadeColeira += 1;
+            }
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Pontuação: ${pontuacao}`, 10, 20);
+
+            requestAnimationFrame(loopDeJogo);
+        }
+
+        window.addEventListener('keydown', function(event) {
+            teclasPressionadas[event.key] = true;
             if (teclasPressionadas['ArrowLeft'] && cachorro.x > 0) {
                 cachorro.x -= cachorro.speed;
             }
@@ -117,28 +210,6 @@
             if (teclasPressionadas['ArrowDown'] && cachorro.y < canvas.height - cachorro.height) {
                 cachorro.y += cachorro.speed;
             }
-
-            atualizarColeiras();
-            coleiras.forEach(coleira => {
-                ctx.fillStyle = 'blue';
-                ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
-            });
-
-            ctx.fillStyle = 'brown';
-            ctx.fillRect(cachorro.x, cachorro.y, cachorro.width, cachorro.height);
-
-            detectarColisoes();
-
-            pontuacao++;
-            ctx.fillStyle = 'black';
-            ctx.font = '20px Arial';
-            ctx.fillText(`Pontuação: ${pontuacao}`, 10, 20);
-
-            requestAnimationFrame(loopDeJogo);
-        }
-
-        window.addEventListener('keydown', function(event) {
-            teclasPressionadas[event.key] = true;
         });
 
         window.addEventListener('keyup', function(event) {
@@ -148,17 +219,30 @@
         canvas.addEventListener('touchstart', function(event) {
             const touchX = event.touches[0].clientX;
             const touchY = event.touches[0].clientY;
-
-            if (touchX < canvas.width / 2) {
-                cachorro.x -= cachorro.speed;
-            } else {
-                cachorro.x += cachorro.speed;
+            if (touchX > cachorro.x && touchX < cachorro.x + cachorro.width &&
+                touchY > cachorro.y && touchY < cachorro.y + cachorro.height) {
+                cachorro.dragging = true;
             }
+        });
 
-            if (touchY < canvas.height / 2) {
-                cachorro.y -= cachorro.speed;
-            } else {
-                cachorro.y += cachorro.speed;
+        canvas.addEventListener('touchmove', function(event) {
+            if (cachorro.dragging) {
+                const touchX = event.touches[0].clientX;
+                const touchY = event.touches[0].clientY;
+                cachorro.x = touchX - cachorro.width / 2;
+                cachorro.y = touchY - cachorro.height / 2;
+            }
+        });
+
+        canvas.addEventListener('touchend', function(event) {
+            cachorro.dragging = false;
+        });
+
+        canvas.addEventListener('click', function(event) {
+            if (temEscudo && event.clientX >= 10 && event.clientX <= 40 && event.clientY >= 10 && event.clientY <= 40) {
+                escudoAtivo = true;
+                temEscudo = false;
+                escudoTempoAtivacao = Date.now();
             }
         });
 
@@ -166,3 +250,4 @@
     </script>
 </body>
 </html>
+
