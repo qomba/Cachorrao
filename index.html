@@ -100,41 +100,26 @@
             }
         });
 
-        powerUps.forEach((powerUp, index) => {
+        for (let i = powerUps.length - 1; i >= 0; i--) {
+            let powerUp = powerUps[i];
             if (cachorro.x < powerUp.x + powerUp.width &&
                 cachorro.x + cachorro.width > powerUp.x &&
                 cachorro.y < powerUp.y + powerUp.height &&
                 cachorro.y + cachorro.height > powerUp.y) {
                 if (powerUp.tipo === 'vida') {
                     vidas++;
-                } else if (powerUp.tipo === 'escudo') {
+                                } else if (powerUp.tipo === 'escudo') {
                     contadorDeEscudos++;
                 } else if (powerUp.tipo === 'arminha') {
                     mostrarBotaoAtirar();
                     balas = 30;
                 }
-                powerUps.splice(index, 1);
-            }
-        });
-
-		for (let i = 0; i < powerUps.length; i++) {
-                let powerUp = powerUps[i];
-                if (powerUp.tipo === 'arminha' &&
-                    cachorro.x < powerUp.x + powerUp.width &&
-                    cachorro.x + cachorro.width > powerUp.x &&
-                    cachorro.y < powerUp.y + powerUp.height &&
-                    cachorro.y + cachorro.height > powerUp.y) {
-                    mostrarBotaoAtirar();
-                    balas = 30;
-                    powerUps.splice(i, 1);
-                    break; // Sair do loop após encontrar a arminha
-                }
+                powerUps.splice(i, 1); // Remove o power-up coletado
             }
         }
-
     }
 
-    function desenharObjetos() {
+    function desenharObjetos()
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (contadorDeEscudos > 0) {
@@ -195,7 +180,7 @@
         if (balas > 0) {
             balas--;
             document.getElementById('contadorBalas').innerText = `Balas: ${balas}`;
-            // Lógica para atirar
+            // Aqui você pode adicionar a lógica para criar um projétil e atirar
         }
         if (balas === 0) {
             esconderBotaoAtirar();
@@ -253,9 +238,8 @@
     });
 
     canvas.addEventListener('mousemove', function(event) {
-        if (cachorro.dragging) {
-            const x = event.clientX - canvas.getBoundingClientRect
-    .left;
+               if (cachorro.dragging) {
+            const x = event.clientX - canvas.getBoundingClientRect().left;
             const y = event.clientY - canvas.getBoundingClientRect().top;
             cachorro.x = x - cachorro.width / 2;
             cachorro.y = y - cachorro.height / 2;
@@ -292,33 +276,51 @@
     }, { passive: false });
 
     function atualizarColeirasEPowerUps() {
-        let agora = Date.now();
-        if (agora - ultimaColeira > intervaloColeira) {
-            criarColeira();
-            ultimaColeira = agora;
+    let agora = Date.now();
+    if (agora - ultimaColeira > intervaloColeira) {
+        criarColeira();
+        ultimaColeira = agora;
+    }
+
+    if (agora - ultimaPowerUp > intervaloPowerUp) {
+        criarPowerUp();
+        ultimaPowerUp = agora;
+    }
+
+    coleiras.forEach((objeto, index) => {
+        objeto.y += velocidadeColeira;
+        if (objeto.y > canvas.height) {
+            coleiras.splice(index, 1);
         }
+    });
 
-        if (agora - ultimaPowerUp > intervaloPowerUp) {
-            criarPowerUp();
-            ultimaPowerUp = agora;
-        }
-
-        coleiras.forEach((objeto, index) => {
-            objeto.y += velocidadeColeira;
-            if (objeto.y > canvas.height) {
-                coleiras.splice(index, 1);
-            }
-        });
-
-        powerUps.forEach((objeto, index) => {
-            objeto.y += velocidadePowerUp;
-            if (objeto.y > canvas.height) {
+    powerUps.forEach((objeto, index) => {
+        objeto.y += velocidadePowerUp;
+        if (objeto.y > canvas.height) {
+            powerUps.splice(index, 1);
+        } else {
+            if (cachorro.x < objeto.x + objeto.width &&
+                cachorro.x + cachorro.width > objeto.x &&
+                cachorro.y < objeto.y + objeto.height &&
+                cachorro.y + cachorro.height > objeto.y) {
+                if (objeto.tipo === 'vida') {
+                    vidas++;
+                } else if (objeto.tipo === 'escudo') {
+                    contadorDeEscudos++;
+                } else if (objeto.tipo === 'arminha') {
+                    mostrarBotaoAtirar();
+                    balas = 30;
+                }
                 powerUps.splice(index, 1);
             }
-        });
-    }
+        }
+    });
+}
+
 
     loopDeJogo();
 </script>
 </body>
 </html>
+
+
