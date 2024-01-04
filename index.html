@@ -29,298 +29,359 @@
 </head>
 <body>
 
-<button id="botaoAtirar" onclick="atirar()" style="display: none;">Atirar</button>
+			<button id="botaoAtirar" onclick="atirar()" style="display: none;">Atirar</button>
 <div id="contadorBalas" style="display: none;">Balas: 30</div>
 
-<canvas id="gameCanvas"></canvas>
-<div id="gameOverScreen">
-    <p>Game Over!</p>
-    <p id="highScoreText"></p>
-    <button onclick="restartGame()">Restart</button>
-</div>
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const gameOverScreen = document.getElementById('gameOverScreen');
-    const highScoreText = document.getElementById('highScoreText');
 
-    canvas.width = Math.min(window.innerWidth, 800);
-    canvas.height = Math.min(window.innerHeight, 600);
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOverScreen">
+        <p>Game Over!</p>
+        <p id="highScoreText"></p>
+        <button onclick="restartGame()">Restart</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const highScoreText = document.getElementById('highScoreText');
 
-    let jogoRodando = true;
-    let pontuacao = 0;
-    let highScore = localStorage.getItem('highScore') || 0;
-    let vidas = 0;
-    let escudoAtivo = false;
-    let escudoTempoAtivacao = 0;
-    let contadorDeEscudos = 0;
-    let balas = 0;
+        canvas.width = Math.min(window.innerWidth, 800);
+        canvas.height = Math.min(window.innerHeight, 600);
 
-    let cachorro = {
-        x: canvas.width / 2, y: canvas.height / 2, width: 50, height: 50, speed: 5, dragging: false
-    };
-    let teclasPressionadas = {};
+        let jogoRodando = true;
+        let pontuacao = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let vidas = 0;
+        let escudoAtivo = false;
+        let escudoTempoAtivacao = 0;
+        let contadorDeEscudos = 0;
 
-    let velocidadePowerUp = 3;
-    let coleiras = [];
-    let powerUps = [];
-    let ultimaColeira = 0;
-    let ultimaPowerUp = 0;
-    let intervaloColeira = 1500;
-    let intervaloPowerUp = 10000;
-    let velocidadeColeira = 5;
+        let cachorro = {
+            x: canvas.width / 2, y: canvas.height / 2, width: 50, height: 50, speed: 5, dragging: false
+        };
+        let teclasPressionadas = {};
 
-    function criarColeira() {
-        const numeroDeColeiras = Math.floor(Math.random() * 5) + 1;
-        for (let i = 0; i < numeroDeColeiras; i++) {
-            let posX = Math.random() * (canvas.width - 30);
-            coleiras.push({ x: posX, y: -30, width: 30, height: 30, tipo: 'coleira' });
+        let velocidadePowerUp = 3;
+        let coleiras = [];
+        let powerUps = [];
+        let ultimaColeira = 0;
+        let ultimaPowerUp = 0;
+        let intervaloColeira = 1500;
+        let intervaloPowerUp = 10000;
+        let velocidadeColeira = 5;
+	let piscandoEscudo = false;
+
+
+        function criarColeira() {
+            const numeroDeColeiras = Math.floor(Math.random() * 5) + 1;
+            for (let i = 0; i < numeroDeColeiras; i++) {
+                let posX = Math.random() * (canvas.width - 30);
+                coleiras.push({ x: posX, y: -30, width: 30, height: 30, tipo: 'coleira' });
+            }
         }
-    }
 
-    function criarPowerUp() {
-        let posX = Math.random() * (canvas.width - 30);
-        let tipo = Math.random() < 0.33 ? 'vida' : (Math.random() < 0.5 ? 'escudo' : 'arminha');
-        powerUps.push({ x: posX, y: -30, width: 30, height: 30, tipo: tipo });
-    }
+  	function criarPowerUp() {
+    let posX = Math.random() * (canvas.width - 30);
+    let tipo = Math.random() < 0.33 ? 'vida' : (Math.random() < 0.5 ? 'escudo' : 'arminha');
+    powerUps.push({ x: posX, y: -30, width: 30, height: 30, tipo: tipo });
+}
 
-    function detectarColisoes() {
-        coleiras.forEach((coleira, index) => {
-            if (cachorro.x < coleira.x + coleira.width &&
-                cachorro.x + cachorro.width > coleira.x &&
-                cachorro.y < coleira.y + coleira.height &&
-                cachorro.y + cachorro.height > coleira.y) {
-                if (!escudoAtivo) {
-                    vidas--;
-                    if (vidas < 0) {
-                        gameOver();
+        function atualizarColeirasEPowerUps() {
+            let agora = Date.now();
+            if (agora - ultimaColeira > intervaloColeira) {
+                criarColeira();
+                ultimaColeira = agora;
+                intervaloColeira = Math.random() * 1500 + 500;
+            }
+
+            if (agora - ultimaPowerUp > intervaloPowerUp) {
+                criarPowerUp();
+                ultimaPowerUp = agora;
+            }
+
+            coleiras.forEach((objeto, index) => {
+                objeto.y += velocidadeColeira;
+                if (objeto.y > canvas.height) {
+                    coleiras.splice(index, 1);
+                }
+            });
+
+            powerUps.forEach((objeto, index) => {
+                objeto.y += velocidadePowerUp;
+                if (objeto.y > canvas.height) {
+                    powerUps.splice(index, 1);
+                }
+            });
+        }
+
+        function detectarColisoes() {
+            coleiras.forEach((coleira, index) => {
+                if (cachorro.x < coleira.x + coleira.width &&
+                    cachorro.x + cachorro.width > coleira.x &&
+                    cachorro.y < coleira.y + coleira.height &&
+                    cachorro.y + cachorro.height > coleira.y) {
+                    if (!escudoAtivo) {
+                        vidas--;
+                        if (vidas < 0) {
+                            gameOver();
+                        }
                     }
+                    coleiras.splice(index, 1);
                 }
-                coleiras.splice(index, 1);
-            }
-        });
+            });
 
-        for (let i = powerUps.length - 1; i >= 0; i--) {
-            let powerUp = powerUps[i];
-            if (cachorro.x < powerUp.x + powerUp.width &&
-                cachorro.x + cachorro.width > powerUp.x &&
-                cachorro.y < powerUp.y + powerUp.height &&
-                cachorro.y + cachorro.height > powerUp.y) {
-                if (powerUp.tipo === 'vida') {
-                    vidas++;
-                                } else if (powerUp.tipo === 'escudo') {
-                    contadorDeEscudos++;
-                } else if (powerUp.tipo === 'arminha') {
-                    mostrarBotaoAtirar();
-                    balas = 30;
+            powerUps.forEach((powerUp, index) => {
+                if (cachorro.x < powerUp.x + powerUp.width &&
+                    cachorro.x + cachorro.width > powerUp.x &&
+                    cachorro.y < powerUp.y + powerUp.height &&
+                    cachorro.y + cachorro.height > powerUp.y) {
+                    if (powerUp.tipo === 'vida') {
+                        vidas++;
+                    } else if (powerUp.tipo === 'escudo') {
+                        contadorDeEscudos++;
+                    }
+                    powerUps.splice(index, 1);
                 }
-                powerUps.splice(i, 1); // Remove o power-up coletado
-            }
+            });
         }
+
+        function desenharObjetos() {
+
+    	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            powerUps.forEach(powerUp => {
+                ctx.fillStyle = powerUp.tipo === 'vida' ? 'green' : 'yellow';
+                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+            });
+	powerUps.forEach(powerUp => {
+    		if (powerUp.tipo === 'arminha') {
+        	ctx.fillStyle = 'red'; // Cor para a arminha
+        	ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
     }
 
-    function desenharObjetos()
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
 
-        if (contadorDeEscudos > 0) {
-            ctx.fillStyle = 'yellow';
-            ctx.fillRect(10, canvas.height - 40, 30, 30); // Desenha o ícone do escudo
-            ctx.fillStyle = 'black';
-            ctx.font = '20px Arial';
-            ctx.fillText(contadorDeEscudos, 45, canvas.height - 15); // Desenha o contador ao lado do ícone
-        }
 
-        // Desenha o cachorro
-        ctx.fillStyle = 'brown';
-        ctx.fillRect(cachorro.x, cachorro.y, cachorro.width, cachorro.height);
-
-        // Desenha a contagem de vidas
+    // ... (restante do código para outros power-ups)
+    if (contadorDeEscudos > 0) {
+	if (!piscandoEscudo || Math.floor(Date.now() / 250) % 2 === 0) {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(10, canvas.height - 40, 30, 30); // Desenha o ícone do escudo
         ctx.fillStyle = 'black';
         ctx.font = '20px Arial';
-        ctx.fillText(vidas, cachorro.x + 20, cachorro.y - 10);
+        ctx.fillText(contadorDeEscudos, 45, canvas.height - 15); // Desenha o contador ao lado do ícone
+    }
+}
 
-        coleiras.forEach(coleira => {
-            ctx.fillStyle = 'blue';
-            ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
-        });
+    // Desenha o cachorro
+    ctx.fillStyle = 'brown';
+    ctx.fillRect(cachorro.x, cachorro.y, cachorro.width, cachorro.height);
 
-        powerUps.forEach(powerUp => {
-            if (powerUp.tipo === 'arminha') {
-                ctx.fillStyle = 'red'; // Cor para a arminha
-                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-            } else if (powerUp.tipo === 'vida') {
-                ctx.fillStyle = 'green'; // Cor para o power-up de vida
-                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-            } else if (powerUp.tipo === 'escudo') {
-                ctx.fillStyle = 'yellow'; // Cor para o power-up de escudo
-                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-            }
-        });
+    // Desenha a contagem de vidas
+    ctx.fillStyle = 'black';
+    ctx.font = '20px Arial';
+    ctx.fillText(vidas, cachorro.x + 20, cachorro.y - 10);
 
-        if (escudoAtivo) {
+            coleiras.forEach(coleira => {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(coleira.x, coleira.y, coleira.width, coleira.height);
+            });
+
+
+
+    if (escudoAtivo) {
+        if (!piscandoEscudo || Math.floor(Date.now() / 250) % 2 === 0) {
             ctx.strokeStyle = 'cyan';
             ctx.lineWidth = 5;
             ctx.strokeRect(cachorro.x - 5, cachorro.y - 5, cachorro.width + 10, cachorro.height + 10);
         }
     }
 
-    function gameOver() {
-        jogoRodando = false;
-        highScore = Math.max(highScore, pontuacao);
-        localStorage.setItem('highScore', highScore);
-        highScoreText.textContent = `Recorde: ${highScore}`;
-        gameOverScreen.style.display = 'block';
-    }
-
-    function restartGame() {
-        window.location.reload();
-    }
-
-    function atirar() {
-        if (balas > 0) {
-            balas--;
-            document.getElementById('contadorBalas').innerText = `Balas: ${balas}`;
-            // Aqui você pode adicionar a lógica para criar um projétil e atirar
-        }
-        if (balas === 0) {
-            esconderBotaoAtirar();
-        }
-    }
-
-    function mostrarBotaoAtirar() {
-        document.getElementById('botaoAtirar').style.display = 'block';
-        document.getElementById('contadorBalas').style.display = 'block';
-    }
-
-    function esconderBotaoAtirar() {
-        document.getElementById('botaoAtirar').style.display = 'none';
-        document.getElementById('contadorBalas').style.display = 'none';
-    }
-
-    function loopDeJogo() {
-        if (!jogoRodando) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        atualizarColeirasEPowerUps();
-        detectarColisoes();
-        desenharObjetos();
-
-        if (escudoAtivo && Date.now() - escudoTempoAtivacao > 5000) {
-            escudoAtivo = false;
         }
 
-        pontuacao++;
-        if (pontuacao % 100 === 0) {
-            velocidadeColeira += 1;
+        function gameOver() {
+            jogoRodando = false;
+            highScore = Math.max(highScore, pontuacao);
+            localStorage.setItem('highScore', highScore);
+            highScoreText.textContent = `Recorde: ${highScore}`;
+            gameOverScreen.style.display = 'block';
         }
-        ctx.fillStyle = 'black';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Pontuação: ${pontuacao}`, 10, 20);
 
-        requestAnimationFrame(loopDeJogo);
+        function restartGame() {
+            window.location.reload();
+        }
+
+        function loopDeJogo() {
+            if (!jogoRodando) return;
+
+		//TESTE PISCADA
+		    if (escudoAtivo) {
+       			 const tempoRestanteEscudo = escudoTempoAtivacao + 7000 - Date.now();
+      				  if (tempoRestanteEscudo < 2000) { // Inicia a piscada nos últimos 1000 ms
+          				  piscandoEscudo = true;
+       				 }
+
+      				  if (tempoRestanteEscudo <= 0) {
+          			  escudoAtivo = false;
+           			 piscandoEscudo = false;
+       	 		}
+  	 	 }
+
+
+
+//FIMM
+
+
+	    // Movimento do cachorro com as setas do teclado
+	    if (teclasPressionadas['ArrowLeft'] && cachorro.x > 0) {
+        cachorro.x -= cachorro.speed;
+ 	   }
+ 	   if (teclasPressionadas['ArrowRight'] && cachorro.x < canvas.width - cachorro.width) {
+        cachorro.x += cachorro.speed;
+ 	   }
+  	  if (teclasPressionadas['ArrowUp'] && cachorro.y > 0) {
+        cachorro.y -= cachorro.speed;
+  	  }
+   	 if (teclasPressionadas['ArrowDown'] && cachorro.y < canvas.height - cachorro.height) {
+        cachorro.y += cachorro.speed;
+   	 }
+
+
+
+
+            atualizarColeirasEPowerUps();
+            detectarColisoes();
+            desenharObjetos();
+
+            if (escudoAtivo && Date.now() - escudoTempoAtivacao > 7000) {
+                escudoAtivo = false;
+            }
+
+            pontuacao++;
+            if (pontuacao % 100 === 0) {
+                velocidadeColeira += 1;
+            }
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Pontuação: ${pontuacao}`, 10, 20);
+
+            requestAnimationFrame(loopDeJogo);
+        }
+
+        window.addEventListener('keydown', function(event) {
+            teclasPressionadas[event.key] = true;
+        });
+
+        window.addEventListener('keyup', function(event) {
+            teclasPressionadas[event.key] = false;
+        });
+
+	//tentativa de mover o bagulho com mouse
+
+		canvas.addEventListener('mousedown', function(event) {
+    const x = event.clientX - canvas.getBoundingClientRect().left;
+    const y = event.clientY - canvas.getBoundingClientRect().top;
+    if (x > cachorro.x && x < cachorro.x + cachorro.width &&
+        y > cachorro.y && y < cachorro.y + cachorro.height) {
+        cachorro.dragging = true;
     }
+});
 
-    window.addEventListener('keydown', function(event) {
-        teclasPressionadas[event.key] = true;
-    });
-
-    window.addEventListener('keyup', function(event) {
-        teclasPressionadas[event.key] = false;
-    });
-
-    canvas.addEventListener('mousedown', function(event) {
+canvas.addEventListener('mousemove', function(event) {
+    if (cachorro.dragging) {
         const x = event.clientX - canvas.getBoundingClientRect().left;
         const y = event.clientY - canvas.getBoundingClientRect().top;
-        if (x > cachorro.x && x < cachorro.x + cachorro.width &&
-            y > cachorro.y && y < cachorro.y + cachorro.height) {
-            cachorro.dragging = true;
-        }
-    });
+        cachorro.x = x - cachorro.width / 2;
+        cachorro.y = y - cachorro.height / 2;
+    }
+});
 
-    canvas.addEventListener('mousemove', function(event) {
-               if (cachorro.dragging) {
-            const x = event.clientX - canvas.getBoundingClientRect().left;
-            const y = event.clientY - canvas.getBoundingClientRect().top;
-            cachorro.x = x - cachorro.width / 2;
-            cachorro.y = y - cachorro.height / 2;
-        }
-    });
+canvas.addEventListener('mouseup', function(event) {
+    cachorro.dragging = false;
+});
 
-    canvas.addEventListener('mouseup', function(event) {
-        cachorro.dragging = false;
-    });
 
-    canvas.addEventListener('touchstart', function(event) {
-        const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
-        const touchY = event.touches[0].clientY - canvas.getBoundingClientRect().top;
-        if (touchX > cachorro.x && touchX < cachorro.x + cachorro.width &&
-            touchY > cachorro.y && touchY < cachorro.y + cachorro.height) {
-            cachorro.dragging = true;
-        }
-        event.preventDefault();
-    }, { passive: false });
+	//fim da TENTATIVA
 
-    canvas.addEventListener('touchmove', function(event) {
-        if (cachorro.dragging) {
+
+        canvas.addEventListener('touchstart', function(event) {
             const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
             const touchY = event.touches[0].clientY - canvas.getBoundingClientRect().top;
-            cachorro.x = touchX - cachorro.width / 2;
-            cachorro.y = touchY - cachorro.height / 2;
-        }
-        event.preventDefault();
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', function(event) {
-        cachorro.dragging = false;
-        event.preventDefault();
-    }, { passive: false });
-
-    function atualizarColeirasEPowerUps() {
-    let agora = Date.now();
-    if (agora - ultimaColeira > intervaloColeira) {
-        criarColeira();
-        ultimaColeira = agora;
-    }
-
-    if (agora - ultimaPowerUp > intervaloPowerUp) {
-        criarPowerUp();
-        ultimaPowerUp = agora;
-    }
-
-    coleiras.forEach((objeto, index) => {
-        objeto.y += velocidadeColeira;
-        if (objeto.y > canvas.height) {
-            coleiras.splice(index, 1);
-        }
-    });
-
-    powerUps.forEach((objeto, index) => {
-        objeto.y += velocidadePowerUp;
-        if (objeto.y > canvas.height) {
-            powerUps.splice(index, 1);
-        } else {
-            if (cachorro.x < objeto.x + objeto.width &&
-                cachorro.x + cachorro.width > objeto.x &&
-                cachorro.y < objeto.y + objeto.height &&
-                cachorro.y + cachorro.height > objeto.y) {
-                if (objeto.tipo === 'vida') {
-                    vidas++;
-                } else if (objeto.tipo === 'escudo') {
-                    contadorDeEscudos++;
-                } else if (objeto.tipo === 'arminha') {
-                    mostrarBotaoAtirar();
-                    balas = 30;
-                }
-                powerUps.splice(index, 1);
+            if (touchX > cachorro.x && touchX < cachorro.x + cachorro.width &&
+                touchY > cachorro.y && touchY < cachorro.y + cachorro.height) {
+                cachorro.dragging = true;
             }
-        }
-    });
+            event.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(event) {
+            if (cachorro.dragging) {
+                const touchX = event.touches[0].clientX - canvas.getBoundingClientRect().left;
+                const touchY = event.touches[0].clientY - canvas.getBoundingClientRect().top;
+                cachorro.x = touchX - cachorro.width / 2;
+                cachorro.y = touchY - cachorro.height / 2;
+            }
+            event.preventDefault();
+        }, { passive: false });
+
+canvas.addEventListener('touchend', function(event) {
+    const touchX = event.changedTouches[0].clientX - canvas.getBoundingClientRect().left;
+    const touchY = event.changedTouches[0].clientY - canvas.getBoundingClientRect().top;
+
+    if (contadorDeEscudos > 0 && touchX >= 10 && touchX <= 40 && touchY >= canvas.height - 40 && touchY <= canvas.height - 10) {
+        escudoAtivo = true;
+        contadorDeEscudos--;
+        escudoTempoAtivacao = Date.now();
+    }
+
+    cachorro.dragging = false;
+    event.preventDefault();
+}, { passive: false });
+
+
+
+canvas.addEventListener('click', function(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    if (contadorDeEscudos > 0 && x >= 10 && x <= 40 && y >= canvas.height - 40 && y <= canvas.height - 10) {
+        escudoAtivo = true;
+        contadorDeEscudos--;
+        escudoTempoAtivacao = Date.now();
+    }
+
+if (powerUp.tipo === 'arminha') {
+    // Ative o modo de atirar e mostre o botão
+    mostrarBotaoAtirar();
+    balas = 30; // número inicial de balas
+};
+
+function atirar() {
+    if (balas > 0) {
+        balas--;
+        document.getElementById('contadorBalas').innerText = `Balas: ${balas}`;
+        // Lógica para atirar (por exemplo, criar um projétil)
+    }
+    if (balas === 0) {
+        esconderBotaoAtirar();
+    }
 }
 
+function mostrarBotaoAtirar() {
+    document.getElementById('botaoAtirar').style.display = 'block';
+    document.getElementById('contadorBalas').style.display = 'block';
+}
 
-    loopDeJogo();
-</script>
+function esconderBotaoAtirar() {
+    document.getElementById('botaoAtirar').style.display = 'none';
+    document.getElementById('contadorBalas').style.display = 'none';
+}
+
+});
+
+
+        loopDeJogo();
+    </script>
 </body>
 </html>
-
-
